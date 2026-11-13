@@ -21,7 +21,7 @@ def render_dashboard():
             f"""
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
                 <span class="admin-badge">Admin Dashboard</span>
-                <h2 style="margin: 0; color: #FFFFFF;">Portfolio Control Center</h2>
+                <h2 style="margin: 0; color: #FFFFFF;">Admin Dashboard</h2>
             </div>
             <p style="color: #94A3B8; margin-top: -0.6rem;">Logged in as: <strong style="color: #93C5FD;">{current_admin}</strong></p>
             """
@@ -94,8 +94,9 @@ def render_dashboard():
 
         with col_fields:
             with st.form("form_profile_upsert"):
-                f_name = st.text_input("Full Name *", value=profile.get("name", ""), placeholder="e.g. Alex Rivers")
-                f_tagline = st.text_input("Tagline / Headline *", value=profile.get("tagline", ""), placeholder="e.g. Senior Software Architect")
+                f_name = st.text_input("Full Name *", value=profile.get("name", ""), placeholder="e.g. Muhammad Yaseen")
+                f_tagline = st.text_input("Tagline / Headline *", value=profile.get("tagline", ""), placeholder="e.g. Automation Engineer")
+                f_specialization = st.text_input("Specialization (optional)", value=profile.get("specialization", "") or "", placeholder="e.g. AI Systems Architecture, Automation")
                 f_bio = st.text_area("Biography / Bio *", value=profile.get("bio", ""), height=130, placeholder="Brief narrative about your technical background...")
                 f_email = st.text_input("Contact Email", value=profile.get("email", ""), placeholder="you@example.com")
                 
@@ -121,7 +122,8 @@ def render_dashboard():
                                 photo_url=f_photo_url,
                                 email=f_email,
                                 github=f_github,
-                                linkedin=f_linkedin
+                                linkedin=f_linkedin,
+                                specialization=f_specialization
                             )
                             if ok:
                                 st.session_state.pop("temp_uploaded_photo", None)
@@ -143,14 +145,14 @@ def render_dashboard():
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
                     new_s_name = st.text_input("Skill Name *", placeholder="e.g. Python, Docker, React")
-                    new_s_cat = st.selectbox("Category *", ["Backend & APIs", "Frontend & UI", "Cloud & DevOps", "AI & Machine Learning", "Databases", "Tools & Systems"])
+                    new_s_cat = st.text_input("Category *", placeholder="e.g. AI Automation, Backend, Cloud")
                 with col_s2:
                     new_s_lvl = st.slider("Proficiency Level (%)", min_value=1, max_value=100, value=85)
 
-                btn_add_skill = st.form_submit_button("Save Skill to Supabase ➕", type="primary")
+                btn_add_skill = st.form_submit_button("Save Skill ➕", type="primary")
                 if btn_add_skill:
-                    if not new_s_name:
-                        st.error("Please enter a skill name.")
+                    if not new_s_name or not new_s_cat:
+                        st.error("Please enter both Skill Name and Category.")
                     else:
                         with st.spinner("Saving skill..."):
                             ok, msg = db.add_skill(name=new_s_name, category=new_s_cat, level=new_s_lvl)
@@ -172,19 +174,22 @@ def render_dashboard():
                 skill_id = chosen_skill.get("id")
 
                 with st.form("form_edit_skill"):
-                    e_s_name = st.text_input("Skill Name", value=chosen_skill.get("name", ""))
-                    e_s_cat = st.text_input("Category", value=chosen_skill.get("category", ""))
+                    e_s_name = st.text_input("Skill Name *", value=chosen_skill.get("name", ""))
+                    e_s_cat = st.text_input("Category *", value=chosen_skill.get("category", ""), placeholder="e.g. AI Automation")
                     e_s_lvl = st.slider("Level (%)", 1, 100, int(chosen_skill.get("level", 80)))
 
                     btn_update_skill = st.form_submit_button("Update Skill 💾", type="primary")
                     if btn_update_skill:
-                        with st.spinner("Updating skill..."):
-                            ok, msg = db.update_skill(skill_id=skill_id, name=e_s_name, category=e_s_cat, level=e_s_lvl)
-                            if ok:
-                                st.success(msg)
-                                st.rerun()
-                            else:
-                                st.error(msg)
+                        if not e_s_name or not e_s_cat:
+                            st.error("Please enter both Skill Name and Category.")
+                        else:
+                            with st.spinner("Updating skill..."):
+                                ok, msg = db.update_skill(skill_id=skill_id, name=e_s_name, category=e_s_cat, level=e_s_lvl)
+                                if ok:
+                                    st.success(msg)
+                                    st.rerun()
+                                else:
+                                    st.error(msg)
 
                 if st.button("🗑️ Delete This Skill", type="secondary", key=f"del_sk_{skill_id}"):
                     with st.spinner("Deleting skill..."):
@@ -205,34 +210,65 @@ def render_dashboard():
         # Add Project Form
         with p_tab_add:
             with st.form("form_add_project"):
-                np_title = st.text_input("Project Title *", placeholder="e.g. Distributed Telemetry Pipeline")
-                np_desc = st.text_area("Full Description *", height=120, placeholder="Detailed architecture and outcomes...")
-                np_tech = st.text_input("Tech Stack *", placeholder="e.g. Python, FastAPI, Supabase, Redis")
-                
+                np_title = st.text_input("Project Title *", placeholder="e.g. AI Workflow Automation Engine")
+                np_desc = st.text_area("Description (optional)", height=120, placeholder="Detailed architecture and outcomes...")
+                np_tech = st.text_input("Tech Stack (optional)", placeholder="e.g. Python, n8n, OpenAI, FastAPI")
+
                 c_p1, c_p2 = st.columns(2)
                 with c_p1:
-                    np_live = st.text_input("Live Demo URL", placeholder="https://...")
+                    np_live = st.text_input("Live Demo URL (optional)", placeholder="https://...")
                 with c_p2:
-                    np_gh = st.text_input("GitHub URL", placeholder="https://github.com/...")
+                    np_gh = st.text_input("GitHub URL (optional)", placeholder="https://github.com/...")
 
-                np_cover = st.text_input("Cover Image URL (Direct link or upload in Edit tab)", placeholder="https://images.unsplash.com/...")
+                np_cover_file = st.file_uploader(
+                    "Cover Image (optional, JPG, PNG, WEBP, max 5MB)",
+                    type=["jpg", "png", "jpeg", "webp"],
+                    key="add_proj_cover_file"
+                )
 
-                btn_add_proj = st.form_submit_button("Save Project to Supabase 🚀", type="primary")
+                np_gallery_files = st.file_uploader(
+                    "Screenshots (optional, JPG, PNG, WEBP, max 5MB each)",
+                    type=["jpg", "png", "jpeg", "webp"],
+                    accept_multiple_files=True,
+                    key="add_proj_gallery_files"
+                )
+
+                btn_add_proj = st.form_submit_button("Save Project 💾", type="primary")
                 if btn_add_proj:
-                    if not np_title or not np_desc or not np_tech:
-                        st.error("Please fill in Title, Description, and Tech Stack.")
+                    if not np_title.strip():
+                        st.error("Please enter a Project Title.")
                     else:
                         with st.spinner("Saving project..."):
+                            cover_url = ""
+                            if np_cover_file:
+                                val_ok, val_err = db.validate_image_file(np_cover_file)
+                                if not val_ok:
+                                    st.error(f"Cover image error: {val_err}")
+                                else:
+                                    up_ok, up_res = db.upload_asset_file(np_cover_file, bucket_name="images")
+                                    if up_ok:
+                                        cover_url = up_res
+                                    else:
+                                        st.error(f"Failed to upload cover: {up_res}")
+
                             ok, msg, new_id = db.add_project(
                                 title=np_title,
                                 description=np_desc,
                                 tech=np_tech,
-                                cover_url=np_cover,
+                                cover_url=cover_url,
                                 live_url=np_live,
                                 github_url=np_gh
                             )
                             if ok:
-                                st.success(f"{msg} You can now upload cover and gallery images in the Edit tab.")
+                                if np_gallery_files and new_id:
+                                    for g_file in np_gallery_files:
+                                        g_val_ok, _ = db.validate_image_file(g_file)
+                                        if g_val_ok:
+                                            g_up_ok, g_url = db.upload_asset_file(g_file, bucket_name="images")
+                                            if g_up_ok:
+                                                db.add_project_image(new_id, g_url)
+
+                                st.success(f"Project '{np_title}' created successfully!")
                                 st.rerun()
                             else:
                                 st.error(msg)
@@ -250,40 +286,48 @@ def render_dashboard():
 
                 # Project Details Form
                 with st.form("form_edit_project"):
-                    ep_title = st.text_input("Title", value=chosen_proj.get("title", ""))
-                    ep_desc = st.text_area("Description", value=chosen_proj.get("description", ""), height=130)
-                    ep_tech = st.text_input("Tech Stack", value=chosen_proj.get("tech", ""))
-                    
+                    ep_title = st.text_input("Title *", value=chosen_proj.get("title", ""))
+                    ep_desc = st.text_area("Description (optional)", value=chosen_proj.get("description", ""), height=130)
+                    ep_tech = st.text_input("Tech Stack (optional)", value=chosen_proj.get("tech", ""))
+
                     c1, c2 = st.columns(2)
                     with c1:
-                        ep_live = st.text_input("Live URL", value=chosen_proj.get("live_url", ""))
+                        ep_live = st.text_input("Live Demo URL (optional)", value=chosen_proj.get("live_url", ""))
                     with c2:
-                        ep_gh = st.text_input("GitHub URL", value=chosen_proj.get("github_url", ""))
-
-                    ep_cover = st.text_input("Cover Image URL", value=chosen_proj.get("cover_url", ""))
+                        ep_gh = st.text_input("GitHub URL (optional)", value=chosen_proj.get("github_url", ""))
 
                     btn_upd_proj = st.form_submit_button("Update Project Details 💾", type="primary")
                     if btn_upd_proj:
-                        with st.spinner("Updating project..."):
-                            ok, msg = db.update_project(
-                                project_id=p_id,
-                                title=ep_title,
-                                description=ep_desc,
-                                tech=ep_tech,
-                                cover_url=ep_cover,
-                                live_url=ep_live,
-                                github_url=ep_gh
-                            )
-                            if ok:
-                                st.success(msg)
-                                st.rerun()
-                            else:
-                                st.error(msg)
+                        if not ep_title.strip():
+                            st.error("Please enter a Project Title.")
+                        else:
+                            with st.spinner("Updating project..."):
+                                ok, msg = db.update_project(
+                                    project_id=p_id,
+                                    title=ep_title,
+                                    description=ep_desc,
+                                    tech=ep_tech,
+                                    cover_url=chosen_proj.get("cover_url", ""),
+                                    live_url=ep_live,
+                                    github_url=ep_gh
+                                )
+                                if ok:
+                                    st.success(msg)
+                                    st.rerun()
+                                else:
+                                    st.error(msg)
 
                 # Cover Image Upload to 'images' bucket
-                with st.expander("🖼️ Upload Cover Image to 'images' Bucket"):
+                with st.expander("🖼️ Replace Cover Image"):
+                    current_cov = chosen_proj.get("cover_url", "")
+                    if current_cov:
+                        st.markdown("**Current Cover:**")
+                        st.image(current_cov, width=240)
+                    else:
+                        st.caption("No cover image currently attached.")
+
                     proj_cover_file = st.file_uploader(
-                        "Upload Cover (JPG, PNG, WEBP)",
+                        "Upload New Cover (JPG, PNG, WEBP, max 5MB)",
                         type=["jpg", "png", "jpeg", "webp"],
                         key=f"cover_upload_{p_id}"
                     )
@@ -292,62 +336,62 @@ def render_dashboard():
                         if not v_ok:
                             st.error(v_err)
                         else:
-                            if st.button("Upload & Attach as Cover 📤", key=f"btn_cov_{p_id}"):
-                                with st.spinner("Uploading cover to Supabase Storage bucket 'images'..."):
+                            if st.button("Upload & Replace Cover 📤", key=f"btn_cov_{p_id}"):
+                                with st.spinner("Uploading cover to Supabase Storage..."):
                                     up_ok, cov_url = db.upload_asset_file(proj_cover_file, bucket_name="images")
                                     if up_ok:
                                         db.update_project(
                                             project_id=p_id,
-                                            title=chosen_proj.get("title"),
-                                            description=chosen_proj.get("description"),
-                                            tech=chosen_proj.get("tech"),
+                                            title=chosen_proj.get("title", ""),
+                                            description=chosen_proj.get("description", ""),
+                                            tech=chosen_proj.get("tech", ""),
                                             cover_url=cov_url,
-                                            live_url=chosen_proj.get("live_url"),
-                                            github_url=chosen_proj.get("github_url")
+                                            live_url=chosen_proj.get("live_url", ""),
+                                            github_url=chosen_proj.get("github_url", "")
                                         )
-                                        st.success(f"Cover image uploaded and updated! URL: {cov_url}")
+                                        st.success("Cover image updated successfully!")
                                         st.rerun()
                                     else:
                                         st.error(cov_url)
 
                 # Multi-Image Gallery Upload to 'images' bucket
-                with st.expander("📸 Project Gallery Uploads"):
+                with st.expander("📸 Project Gallery Screenshots (Add / Delete)"):
                     gallery = db.get_project_images(p_id)
                     if gallery:
-                        st.markdown("**Current Gallery Screenshots**")
+                        st.markdown("**Current Gallery Screenshots:**")
                         g_cols = st.columns(len(gallery) if len(gallery) <= 3 else 3)
                         for g_idx, g_item in enumerate(gallery):
                             with g_cols[g_idx % 3]:
                                 st.image(g_item.get("image_url"), width=180)
                                 if st.button("🗑️ Remove", key=f"del_g_{g_item.get('id')}"):
                                     db.delete_project_image(g_item.get("id"))
-                                    st.success("Gallery image removed.")
+                                    st.success("Screenshot removed.")
                                     st.rerun()
                     else:
-                        st.caption("No gallery images attached to this project yet.")
+                        st.caption("No gallery screenshots attached yet.")
 
-                    gallery_file = st.file_uploader(
-                        "Upload New Screenshot (JPG, PNG, WEBP)",
+                    gallery_files = st.file_uploader(
+                        "Upload Screenshots (JPG, PNG, WEBP, max 5MB each)",
                         type=["jpg", "png", "jpeg", "webp"],
+                        accept_multiple_files=True,
                         key=f"gallery_uploader_{p_id}"
                     )
-                    if gallery_file:
-                        gv_ok, gv_err = db.validate_image_file(gallery_file)
-                        if not gv_ok:
-                            st.error(gv_err)
-                        else:
-                            if st.button("Upload to 'images' Bucket & Add to Gallery ➕", key=f"btn_g_add_{p_id}"):
-                                with st.spinner("Uploading screenshot to Supabase Storage 'images'..."):
-                                    up_ok, g_img_url = db.upload_asset_file(gallery_file, bucket_name="images")
-                                    if up_ok:
-                                        ok, msg = db.add_project_image(p_id, g_img_url)
-                                        if ok:
-                                            st.success("Screenshot added to project gallery!")
-                                            st.rerun()
-                                        else:
-                                            st.error(msg)
-                                    else:
-                                        st.error(g_img_url)
+                    if gallery_files:
+                        if st.button("Upload & Add to Gallery ➕", key=f"btn_g_add_{p_id}"):
+                            with st.spinner("Uploading screenshots..."):
+                                count = 0
+                                for g_file in gallery_files:
+                                    gv_ok, _ = db.validate_image_file(g_file)
+                                    if gv_ok:
+                                        up_ok, g_img_url = db.upload_asset_file(g_file, bucket_name="images")
+                                        if up_ok:
+                                            db.add_project_image(p_id, g_img_url)
+                                            count += 1
+                                if count > 0:
+                                    st.success(f"{count} screenshot(s) added to project gallery!")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to upload valid screenshots.")
 
                 # Delete Project
                 st.divider()
@@ -372,20 +416,38 @@ def render_dashboard():
             with st.form("form_add_cert"):
                 nc_title = st.text_input("Certification Title *", placeholder="e.g. AWS Certified Solutions Architect")
                 nc_issuer = st.text_input("Issuing Organization *", placeholder="e.g. Amazon Web Services (AWS)")
-                nc_cred = st.text_input("Credential Verification URL", placeholder="https://aws.amazon.com/...")
-                nc_file = st.text_input("Credential Asset / File URL (Direct link or upload in Edit tab)")
+                nc_cred = st.text_input("Credential Verification URL (optional)", placeholder="https://aws.amazon.com/...")
+                nc_file_upload = st.file_uploader(
+                    "Certificate Image or PDF (optional, JPG, PNG, WEBP, PDF, max 5MB)",
+                    type=["jpg", "png", "jpeg", "webp", "pdf"],
+                    key="add_cert_file_upload"
+                )
 
-                btn_add_cert = st.form_submit_button("Save Certification to Supabase ➕", type="primary")
+                btn_add_cert = st.form_submit_button("Save Certification ➕", type="primary")
                 if btn_add_cert:
                     if not nc_title or not nc_issuer:
                         st.error("Please fill in Title and Issuer.")
                     else:
                         with st.spinner("Saving certification..."):
+                            file_url = ""
+                            if nc_file_upload:
+                                is_pdf = nc_file_upload.name.lower().endswith(".pdf")
+                                val_ok, val_err = db.validate_pdf_file(nc_file_upload) if is_pdf else db.validate_image_file(nc_file_upload)
+                                if not val_ok:
+                                    st.error(val_err)
+                                else:
+                                    bucket_target = "documents" if is_pdf else "images"
+                                    up_ok, pub_url = db.upload_asset_file(nc_file_upload, bucket_name=bucket_target)
+                                    if up_ok:
+                                        file_url = pub_url
+                                    else:
+                                        st.error(f"Failed to upload file: {pub_url}")
+
                             ok, msg = db.add_certification(
                                 title=nc_title,
                                 issuer=nc_issuer,
                                 credential_url=nc_cred,
-                                file_url=nc_file
+                                file_url=file_url
                             )
                             if ok:
                                 st.success(msg)
@@ -405,31 +467,42 @@ def render_dashboard():
                 cert_id = chosen_cert.get("id")
 
                 with st.form("form_edit_cert"):
-                    ec_title = st.text_input("Title", value=chosen_cert.get("title", ""))
-                    ec_issuer = st.text_input("Issuer", value=chosen_cert.get("issuer", ""))
-                    ec_cred = st.text_input("Credential URL", value=chosen_cert.get("credential_url", ""))
-                    ec_file = st.text_input("File URL", value=chosen_cert.get("file_url", ""))
+                    ec_title = st.text_input("Title *", value=chosen_cert.get("title", ""))
+                    ec_issuer = st.text_input("Issuer *", value=chosen_cert.get("issuer", ""))
+                    ec_cred = st.text_input("Credential Verification URL (optional)", value=chosen_cert.get("credential_url", ""))
 
-                    btn_upd_cert = st.form_submit_button("Update Certification 💾", type="primary")
+                    btn_upd_cert = st.form_submit_button("Update Certification Details 💾", type="primary")
                     if btn_upd_cert:
-                        with st.spinner("Updating certification..."):
-                            ok, msg = db.update_certification(
-                                cert_id=cert_id,
-                                title=ec_title,
-                                issuer=ec_issuer,
-                                credential_url=ec_cred,
-                                file_url=ec_file
-                            )
-                            if ok:
-                                st.success(msg)
-                                st.rerun()
-                            else:
-                                st.error(msg)
+                        if not ec_title or not ec_issuer:
+                            st.error("Please fill in Title and Issuer.")
+                        else:
+                            with st.spinner("Updating certification..."):
+                                ok, msg = db.update_certification(
+                                    cert_id=cert_id,
+                                    title=ec_title,
+                                    issuer=ec_issuer,
+                                    credential_url=ec_cred,
+                                    file_url=chosen_cert.get("file_url", "")
+                                )
+                                if ok:
+                                    st.success(msg)
+                                    st.rerun()
+                                else:
+                                    st.error(msg)
 
                 # Upload Image / PDF for this certificate
-                with st.expander("📤 Upload Certificate Asset (Image or PDF)"):
+                with st.expander("📤 Replace Certificate Asset (Image or PDF)"):
+                    current_asset = chosen_cert.get("file_url", "")
+                    if current_asset:
+                        if current_asset.lower().endswith(".pdf"):
+                            st.markdown(f"**Current PDF:** [View Document]({current_asset})")
+                        else:
+                            st.image(current_asset, width=200)
+                    else:
+                        st.caption("No asset currently attached.")
+
                     cert_file = st.file_uploader(
-                        "Upload Badge or Certificate (JPG, PNG, PDF)",
+                        "Upload Badge or Certificate (JPG, PNG, WEBP, PDF, max 5MB)",
                         type=["jpg", "png", "jpeg", "webp", "pdf"],
                         key=f"cert_upload_{cert_id}"
                     )
@@ -440,18 +513,18 @@ def render_dashboard():
                             st.error(val_err)
                         else:
                             bucket_target = "documents" if is_pdf else "images"
-                            if st.button("Upload to Bucket & Save to Certification 📤", key=f"btn_c_up_{cert_id}"):
+                            if st.button("Upload & Replace Certificate Asset 📤", key=f"btn_c_up_{cert_id}"):
                                 with st.spinner(f"Uploading to Supabase Storage '{bucket_target}'..."):
                                     up_ok, pub_url = db.upload_asset_file(cert_file, bucket_name=bucket_target)
                                     if up_ok:
                                         db.update_certification(
                                             cert_id=cert_id,
-                                            title=chosen_cert.get("title"),
-                                            issuer=chosen_cert.get("issuer"),
-                                            credential_url=chosen_cert.get("credential_url"),
+                                            title=chosen_cert.get("title", ""),
+                                            issuer=chosen_cert.get("issuer", ""),
+                                            credential_url=chosen_cert.get("credential_url", ""),
                                             file_url=pub_url
                                         )
-                                        st.success(f"Certificate asset uploaded and attached! URL: {pub_url}")
+                                        st.success(f"Certificate asset updated! URL: {pub_url}")
                                         st.rerun()
                                     else:
                                         st.error(pub_url)
@@ -499,7 +572,7 @@ def render_dashboard():
                     st.error(pdf_err)
                 else:
                     st.success("Valid PDF document ready for upload.")
-                    if st.button("Publish CV to 'documents' Bucket (Upsert id=1) 📄", type="primary"):
+                    if st.button("Publish CV Document 📄", type="primary"):
                         with st.spinner("Uploading to Supabase Storage 'documents' bucket..."):
                             up_ok, public_pdf_url = db.upload_asset_file(cv_pdf_file, bucket_name="documents")
                             if up_ok:

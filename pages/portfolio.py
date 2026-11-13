@@ -4,121 +4,149 @@ Displays hero, about, skills, projects, certifications, CV download/preview, and
 """
 
 import streamlit as st
-import requests
+import logging
 from utils import db, styles
+
+logger = logging.getLogger(__name__)
 
 
 def render_portfolio():
-    # Only falls back to demo data if DB is empty AND not in admin mode
-    profile = db.get_profile(for_admin=False)
-    skills = db.get_skills(for_admin=False)
-    projects = db.get_projects(for_admin=False)
-    certifications = db.get_certifications(for_admin=False)
-    cv_doc = db.get_active_cv(for_admin=False)
+    try:
+        profile = db.get_profile(for_admin=False)
+        skills = db.get_skills(for_admin=False)
+        projects = db.get_projects(for_admin=False)
+        certifications = db.get_certifications(for_admin=False)
+        cv_doc = db.get_active_cv(for_admin=False)
+    except Exception as e:
+        logger.error(f"Error loading portfolio data: {e}")
+        st.error("Unable to load portfolio details at this time. Please try again later.")
+        return
 
-    # Database configuration banner if running without Supabase credentials
-    if not db.is_supabase_configured():
-        st.info(
-            "💡 **Running in Demo Mode**: Sample data is currently displayed. "
-            "To connect your live Supabase database, configure `SUPABASE_URL` and `SUPABASE_KEY` "
-            "in `.streamlit/secrets.toml`."
-        )
+    name = profile.get("name") or "Muhammad Yaseen"
+    tagline = profile.get("tagline") or ""
+    bio = profile.get("bio") or ""
+    email = profile.get("email") or ""
+    location = profile.get("location") or ""
+    photo_url = profile.get("photo_url") or profile.get("avatar_url") or ""
+    github_url = profile.get("github") or profile.get("github_url") or ""
+    linkedin_url = profile.get("linkedin") or profile.get("linkedin_url") or ""
+    specialization = profile.get("specialization") or ""
 
     # ==========================================================================
     # 1. HERO SECTION
     # ==========================================================================
-    photo_url = profile.get("photo_url") or profile.get("avatar_url") or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
-    name = profile.get("name", "Alex Rivers")
-    tagline = profile.get("tagline", "Senior Software Engineer & AI Systems Architect")
-    email = profile.get("email", "contact@example.com")
-    location = profile.get("location", "San Francisco, CA / Remote")
-    github_url = profile.get("github") or profile.get("github_url", "https://github.com")
-    linkedin_url = profile.get("linkedin") or profile.get("linkedin_url", "https://linkedin.com")
+    social_buttons = []
+    if github_url:
+        social_buttons.append(f'<a href="{github_url}" target="_blank" rel="noopener noreferrer" class="social-btn"><span>🐙</span> GitHub</a>')
+    if linkedin_url:
+        social_buttons.append(f'<a href="{linkedin_url}" target="_blank" rel="noopener noreferrer" class="social-btn"><span>💼</span> LinkedIn</a>')
+    if email:
+        social_buttons.append(f'<a href="mailto:{email}" class="social-btn"><span>✉️</span> Get in Touch</a>')
 
-    social_buttons_html = f"""
-    <div class="social-links">
-        {f'<a href="{github_url}" target="_blank" class="social-btn"><span>🐙</span> GitHub</a>' if github_url else ''}
-        {f'<a href="{linkedin_url}" target="_blank" class="social-btn"><span>💼</span> LinkedIn</a>' if linkedin_url else ''}
-        {f'<a href="mailto:{email}" class="social-btn"><span>✉️</span> Get in Touch</a>' if email else ''}
-    </div>
-    """
+    social_buttons_html = f'<div class="social-links">{" ".join(social_buttons)}</div>' if social_buttons else ""
+    avatar_html = f'<img src="{photo_url}" alt="{name}" class="hero-avatar" />' if photo_url else ''
+    tagline_html = f'<p class="hero-tagline">{tagline}</p>' if tagline else ''
+    location_html = f'<p style="color: #64748B; font-size: 0.9rem; margin-top: -0.5rem;">📍 {location}</p>' if location else ''
 
     hero_html = f"""
     <div class="hero-container">
-        <img src="{photo_url}" alt="{name}" class="hero-avatar" />
+        {avatar_html}
         <div class="status-badge">
             <span class="status-dot"></span>
             Available for Select Projects & Leadership Roles
         </div>
         <h1 class="hero-name">{name}</h1>
-        <p class="hero-tagline">{tagline}</p>
-        <p style="color: #64748B; font-size: 0.9rem; margin-top: -0.5rem;">📍 {location}</p>
+        {tagline_html}
+        {location_html}
         {social_buttons_html}
     </div>
     """
     styles.render_html(hero_html)
 
-    # Sub-Navigation Anchor Bar
-    styles.render_html(
-        """
-        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2.5rem;">
-            <a href="#about" style="text-decoration: none; color: #93C5FD; font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.8rem; background: rgba(59, 130, 246, 0.1); border-radius: 9999px; border: 1px solid rgba(59, 130, 246, 0.2);">About</a>
-            <a href="#skills" style="text-decoration: none; color: #93C5FD; font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.8rem; background: rgba(59, 130, 246, 0.1); border-radius: 9999px; border: 1px solid rgba(59, 130, 246, 0.2);">Skills</a>
-            <a href="#projects" style="text-decoration: none; color: #93C5FD; font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.8rem; background: rgba(59, 130, 246, 0.1); border-radius: 9999px; border: 1px solid rgba(59, 130, 246, 0.2);">Projects</a>
-            <a href="#certifications" style="text-decoration: none; color: #93C5FD; font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.8rem; background: rgba(59, 130, 246, 0.1); border-radius: 9999px; border: 1px solid rgba(59, 130, 246, 0.2);">Certifications</a>
-            <a href="#cv-resume" style="text-decoration: none; color: #93C5FD; font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.8rem; background: rgba(59, 130, 246, 0.1); border-radius: 9999px; border: 1px solid rgba(59, 130, 246, 0.2);">CV / Resume</a>
-            <a href="#contact" style="text-decoration: none; color: #93C5FD; font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.8rem; background: rgba(59, 130, 246, 0.1); border-radius: 9999px; border: 1px solid rgba(59, 130, 246, 0.2);">Contact</a>
-        </div>
-        """
-    )
+    # Dynamic Sub-Navigation (only shows sections with actual data)
+    nav_links = []
+    if bio:
+        nav_links.append('<a href="#about" class="subnav-link">About</a>')
+    if skills:
+        nav_links.append('<a href="#skills" class="subnav-link">Skills</a>')
+    if projects:
+        nav_links.append('<a href="#projects" class="subnav-link">Projects</a>')
+    if certifications:
+        nav_links.append('<a href="#certifications" class="subnav-link">Certifications</a>')
+    if cv_doc and cv_doc.get("file_url"):
+        nav_links.append('<a href="#cv-resume" class="subnav-link">CV / Resume</a>')
+    nav_links.append('<a href="#contact" class="subnav-link">Contact</a>')
+
+    if len(nav_links) > 1:
+        styles.render_html(f'<div class="subnav-bar">{" ".join(nav_links)}</div>')
 
     # ==========================================================================
-    # 2. ABOUT ME SECTION
+    # 2. ABOUT ME SECTION (Rendered only when bio exists)
     # ==========================================================================
-    styles.render_html('<div id="about" class="section-header"><div class="section-title"><span>👤</span> About Me</div><div class="section-subtitle">Background, philosophy, and technical focus</div></div>')
+    if bio:
+        # Section header — no hardcoded subtitle
+        styles.render_html('<div id="about" class="section-header"><div class="section-title"><span>👤</span> About Me</div></div>')
 
-    bio = profile.get("bio", "Software engineer passionate about scalable cloud infrastructure.")
-    about_col1, about_col2 = st.columns([2, 1])
-
-    with about_col1:
-        styles.render_html(
-            f"""
-            <div class="glass-card" style="height: 100%;">
-                <p style="font-size: 1.05rem; line-height: 1.7; color: #E2E8F0; margin: 0;">
-                    {bio}
-                </p>
-            </div>
-            """
+        # Build bio HTML: convert newlines to paragraph tags for proper spacing
+        bio_paragraphs = "".join(
+            f"<p>{para.strip()}</p>"
+            for para in bio.split("\n")
+            if para.strip()
         )
+        bio_html = f'<div class="about-bio-text">{bio_paragraphs}</div>'
 
-    with about_col2:
-        styles.render_html(
-            f"""
-            <div class="glass-card" style="height: 100%;">
-                <div style="margin-bottom: 1rem;">
-                    <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748B; font-weight: 700;">Location</div>
-                    <div style="font-size: 0.95rem; font-weight: 600; color: #F1F5F9;">{location}</div>
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748B; font-weight: 700;">Direct Contact</div>
-                    <div style="font-size: 0.95rem; font-weight: 600; color: #93C5FD;">{email}</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748B; font-weight: 700;">Focus</div>
-                    <div style="font-size: 0.95rem; font-weight: 600; color: #34D399;">Cloud Architecture & AI</div>
+        # Build info card items — only lines with actual data
+        info_items = []
+        if location:
+            info_items.append(f"""
+            <div class="about-info-item">
+                <div class="about-info-label">Location</div>
+                <div class="about-info-val">{location}</div>
+            </div>
+            """)
+        if email:
+            info_items.append(f"""
+            <div class="about-info-item">
+                <div class="about-info-label">Direct Contact</div>
+                <div class="about-info-val">
+                    <a href="mailto:{email}" class="about-info-email">{email}</a>
                 </div>
             </div>
-            """
-        )
+            """)
+        if specialization:
+            info_items.append(f"""
+            <div class="about-info-item">
+                <div class="about-info-label">Specialization</div>
+                <div class="about-info-val about-spec-val">{specialization}</div>
+            </div>
+            """)
+
+        if info_items:
+            # Two-column grid via a single HTML block so CSS can control equal height
+            styles.render_html(f"""
+            <div class="about-grid">
+                <div class="glass-card about-card">
+                    {bio_html}
+                </div>
+                <div class="glass-card about-card">
+                    {''.join(info_items)}
+                </div>
+            </div>
+            """)
+        else:
+            # No sidebar info at all — show bio full-width
+            styles.render_html(f"""
+            <div class="glass-card">
+                {bio_html}
+            </div>
+            """)
 
     # ==========================================================================
-    # 3. SKILLS SECTION
+    # 3. SKILLS SECTION (Rendered only when skills exist)
     # ==========================================================================
-    styles.render_html('<div id="skills" class="section-header"><div class="section-title"><span>⚡</span> Technical Skills</div><div class="section-subtitle">Categorized competencies and proficiency ratings</div></div>')
+    if skills:
+        styles.render_html('<div id="skills" class="section-header"><div class="section-title"><span>⚡</span> Technical Skills</div><div class="section-subtitle">Categorized competencies and proficiency ratings</div></div>')
 
-    if not skills:
-        st.info("No skills configured yet.")
-    else:
         categories: dict[str, list] = {}
         for s in skills:
             cat = s.get("category", "General")
@@ -159,21 +187,19 @@ def render_portfolio():
                 )
 
     # ==========================================================================
-    # 4. PROJECTS SECTION
+    # 4. PROJECTS SECTION (Rendered only when projects exist)
     # ==========================================================================
-    styles.render_html('<div id="projects" class="section-header"><div class="section-title"><span>🚀</span> Featured Projects</div><div class="section-subtitle">Real-world production platforms, developer tools, and architectures</div></div>')
+    if projects:
+        styles.render_html('<div id="projects" class="section-header"><div class="section-title"><span>🚀</span> Featured Projects</div><div class="section-subtitle">Production platforms, applications, and tools</div></div>')
 
-    if not projects:
-        st.info("No projects published yet.")
-    else:
         p_cols = st.columns(2)
         for idx, proj in enumerate(projects):
             with p_cols[idx % 2]:
                 pid = proj.get("id")
-                title = proj.get("title", "Project Title")
+                title = proj.get("title", "")
                 desc = proj.get("description", "")
                 tech_stack = proj.get("tech") or proj.get("tech_stack", "")
-                cover_url = proj.get("cover_url") or proj.get("cover_image_url") or "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80"
+                cover_url = proj.get("cover_url") or proj.get("cover_image_url") or ""
                 live_url = proj.get("live_url", "")
                 gh_url = proj.get("github_url", "")
 
@@ -181,58 +207,58 @@ def render_portfolio():
                     [f'<span class="tech-pill">{t.strip()}</span>' for t in str(tech_stack).split(",") if t.strip()]
                 )
 
+                img_html = f'''<img src="{cover_url}" alt="{title}" class="project-img" onerror="this.style.display='none'" />''' if cover_url else ""
+
                 styles.render_html(
                     f"""
                     <div class="project-card">
-                        <img src="{cover_url}" alt="{title}" class="project-img" onerror="this.src='https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80'" />
+                        {img_html}
                         <div class="project-body">
                             <div class="project-title">{title}</div>
-                            <div style="margin-top: 0.5rem; margin-bottom: 1rem;">
-                                {tech_pills_html}
-                            </div>
+                            {f'<div style="margin-top: 0.5rem; margin-bottom: 1rem;">{tech_pills_html}</div>' if tech_pills_html else ''}
                         </div>
                     </div>
                     """
                 )
 
-                link_col1, link_col2 = st.columns(2)
-                with link_col1:
-                    if live_url:
+                if live_url or gh_url:
+                    if live_url and gh_url:
+                        link_col1, link_col2 = st.columns(2)
+                        with link_col1:
+                            st.link_button("🌐 Live App", live_url)
+                        with link_col2:
+                            st.link_button("💻 GitHub", gh_url)
+                    elif live_url:
                         st.link_button("🌐 Live App", live_url)
-                with link_col2:
-                    if gh_url:
+                    elif gh_url:
                         st.link_button("💻 GitHub", gh_url)
 
-                # Detail View with Gallery
-                with st.expander(f"📖 Project Details & Gallery: {title}", expanded=False):
-                    st.markdown("**Overview & Architecture**")
-                    st.write(desc)
+                gallery_images = db.get_project_images(pid)
+                if desc or gallery_images:
+                    with st.expander(f"📖 Project Details & Gallery: {title}", expanded=False):
+                        if desc:
+                            st.markdown("**Overview**")
+                            st.write(desc)
 
-                    # Multi-image gallery
-                    gallery_images = db.get_project_images(pid)
-                    if gallery_images:
-                        st.markdown("**Project Gallery**")
-                        g_cols = st.columns(len(gallery_images) if len(gallery_images) <= 3 else 3)
-                        for g_idx, g_img in enumerate(gallery_images):
-                            with g_cols[g_idx % 3]:
-                                st.image(
-                                    g_img.get("image_url", ""),
-                                    caption=f"Screenshot {g_idx+1}",
-                                    width=240
-                                )
-                    else:
-                        st.caption("No additional gallery screenshots for this project.")
+                        if gallery_images:
+                            st.markdown("**Project Gallery**")
+                            g_cols = st.columns(len(gallery_images) if len(gallery_images) <= 3 else 3)
+                            for g_idx, g_img in enumerate(gallery_images):
+                                with g_cols[g_idx % 3]:
+                                    st.image(
+                                        g_img.get("image_url", ""),
+                                        caption=f"{title} - Screenshot {g_idx+1}",
+                                        width=240
+                                    )
 
                 styles.render_html("<div style='margin-bottom: 1.5rem;'></div>")
 
     # ==========================================================================
-    # 5. CERTIFICATIONS SECTION
+    # 5. CERTIFICATIONS SECTION (Rendered only when certifications exist)
     # ==========================================================================
-    styles.render_html('<div id="certifications" class="section-header"><div class="section-title"><span>🎓</span> Certifications & Credentials</div><div class="section-subtitle">Verified professional credentials and specializations</div></div>')
+    if certifications:
+        styles.render_html('<div id="certifications" class="section-header"><div class="section-title"><span>🎓</span> Certifications & Credentials</div><div class="section-subtitle">Verified professional credentials and specializations</div></div>')
 
-    if not certifications:
-        st.info("No certifications added yet.")
-    else:
         c_cols = st.columns(len(certifications) if len(certifications) <= 3 else 3)
         for idx, cert in enumerate(certifications):
             with c_cols[idx % (len(c_cols))]:
@@ -251,32 +277,39 @@ def render_portfolio():
                     """
                 )
 
-                btn_cols = st.columns(2 if (cred_url and file_url) else 1)
-                b_idx = 0
-                if cred_url:
-                    with btn_cols[b_idx]:
+                if cred_url and file_url:
+                    btn_col1, btn_col2 = st.columns(2)
+                    with btn_col1:
                         st.link_button("Verify ↗", cred_url)
-                    b_idx += 1
-                if file_url:
-                    with btn_cols[b_idx]:
+                    with btn_col2:
                         if file_url.lower().endswith(".pdf"):
                             st.link_button("View PDF 📄", file_url)
                         else:
                             with st.popover("Preview 🖼️"):
                                 st.image(file_url, caption=f"{title} - {issuer}")
+                elif cred_url:
+                    st.link_button("Verify ↗", cred_url)
+                elif file_url:
+                    if file_url.lower().endswith(".pdf"):
+                        st.link_button("View PDF 📄", file_url)
+                    else:
+                        with st.popover("Preview 🖼️"):
+                            st.image(file_url, caption=f"{title} - {issuer}")
 
     # ==========================================================================
-    # 6. CV & RESUME SECTION
+    # 6. CV & RESUME SECTION (Rendered only when CV file exists)
     # ==========================================================================
-    styles.render_html('<div id="cv-resume" class="section-header"><div class="section-title"><span>📄</span> Curriculum Vitae</div><div class="section-subtitle">Comprehensive career history, accomplishments, and skills</div></div>')
-
     if cv_doc and cv_doc.get("file_url"):
         cv_url = cv_doc.get("file_url", "")
 
         styles.render_html(
             """
+            <div id="cv-resume" class="section-header">
+                <div class="section-title"><span>📄</span> Curriculum Vitae</div>
+                <div class="section-subtitle">Career history, accomplishments, and skills</div>
+            </div>
             <div class="cv-banner">
-                <h3 style="color: #F8FAFC; margin-bottom: 0.5rem; font-weight: 700;">Verified Curriculum Vitae (PDF)</h3>
+                <h3 style="color: #F8FAFC; margin-bottom: 0.5rem; font-weight: 700;">Curriculum Vitae</h3>
                 <p style="color: #94A3B8; margin-bottom: 1.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">
                     Available for direct download or inline review.
                 </p>
@@ -292,14 +325,9 @@ def render_portfolio():
             with action_cols[1]:
                 with st.expander("👀 Preview Resume inline"):
                     if cv_url.startswith("http"):
-                        if hasattr(st, "iframe"):
-                            st.iframe(cv_url, height=600)
-                        else:
-                            st.components.v1.iframe(cv_url, height=600)
+                        st.iframe(cv_url, height=600)
                     else:
                         st.info("PDF preview available via download.")
-    else:
-        st.info("No CV document published yet.")
 
     # ==========================================================================
     # 7. CONTACT SECTION
@@ -308,20 +336,29 @@ def render_portfolio():
 
     c_col1, c_col2 = st.columns([1, 1])
     with c_col1:
+        contact_details_html = []
+        if email:
+            contact_details_html.append(f"""
+            <div style="display: flex; align-items: center; gap: 0.6rem; color: #E2E8F0;">
+                <span>✉️</span> <a href="mailto:{email}" style="color: #60A5FA; text-decoration: none;">{email}</a>
+            </div>
+            """)
+        if location:
+            contact_details_html.append(f"""
+            <div style="display: flex; align-items: center; gap: 0.6rem; color: #E2E8F0;">
+                <span>📍</span> {location}
+            </div>
+            """)
+
         styles.render_html(
             f"""
             <div class="glass-card" style="height: 100%;">
-                <h4 style="color: #F8FAFC; margin-bottom: 1rem;">Let's Build Something Exceptional</h4>
+                <h4 style="color: #F8FAFC; margin-bottom: 1rem;">Let's Connect</h4>
                 <p style="color: #94A3B8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
                     Feel free to reach out for high-impact technical initiatives, architecture consulting, or engineering discussions.
                 </p>
                 <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem; color: #E2E8F0;">
-                        <span>✉️</span> <a href="mailto:{email}" style="color: #60A5FA; text-decoration: none;">{email}</a>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.6rem; color: #E2E8F0;">
-                        <span>📍</span> {location}
-                    </div>
+                    {''.join(contact_details_html)}
                 </div>
             </div>
             """
@@ -329,10 +366,10 @@ def render_portfolio():
 
     with c_col2:
         with st.form("contact_form", clear_on_submit=True):
-            st.markdown("<h4 style='color: #F8FAFC; margin-bottom: 0.5rem;'>Send a Quick Note</h4>", unsafe_allow_html=True)
-            sender_name = st.text_input("Your Name", placeholder="Jane Doe")
-            sender_email = st.text_input("Your Email", placeholder="jane@example.com")
-            message = st.text_area("Message", placeholder="Hi Alex, I'd like to discuss a project...")
+            st.markdown("<h4 style='color: #F8FAFC; margin-bottom: 0.5rem;'>Send a Message</h4>", unsafe_allow_html=True)
+            sender_name = st.text_input("Your Name", placeholder="Your Name")
+            sender_email = st.text_input("Your Email", placeholder="you@example.com")
+            message = st.text_area("Message", placeholder="Write your message here...")
             submitted = st.form_submit_button("Send Message 🚀")
 
             if submitted:
@@ -345,10 +382,9 @@ def render_portfolio():
     # 8. FOOTER
     # ==========================================================================
     styles.render_html(
-        f"""
+        """
         <div class="footer">
-            <div>© 2026 {name}. Engineered with Streamlit & Supabase.</div>
-            <div style="font-size: 0.8rem; color: #475569;">All rights reserved.</div>
+            <div>© 2026 Muhammad Yaseen. All rights reserved.</div>
         </div>
         """
     )

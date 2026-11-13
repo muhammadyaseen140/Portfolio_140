@@ -49,16 +49,39 @@ def get_custom_css() -> str:
         font-family: 'JetBrains Mono', monospace !important;
     }
 
-    /* Hide Streamlit top header bar */
+    /* Hide Streamlit default chrome (menu, header, footer, deploy button) */
+    #MainMenu {
+        visibility: hidden !important;
+        display: none !important;
+    }
     header[data-testid="stHeader"] {
-        display: none;
+        visibility: hidden !important;
+        display: none !important;
+    }
+    footer {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    .stDeployButton {
+        display: none !important;
+    }
+    div[data-testid="stToolbar"] {
+        display: none !important;
+    }
+    div[data-testid="stDecoration"] {
+        display: none !important;
+    }
+    div[data-testid="stStatusWidget"] {
+        display: none !important;
     }
     
-    /* Main container padding */
+    /* Main centered container with consistent width and spacing */
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 4rem !important;
-        max-width: 1120px !important;
+        max-width: 1040px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
 
     /* Hero Section */
@@ -201,6 +224,71 @@ def get_custom_css() -> str:
         border-color: var(--border-highlight);
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 15px var(--primary-glow);
         transform: translateY(-3px);
+    }
+
+    /* About Me Grid Layout (Equal Height & Responsive) */
+    .about-grid {
+        display: grid;
+        grid-template-columns: 1.35fr 1fr;
+        gap: 1.5rem;
+        align-items: stretch;
+        width: 100%;
+        margin-bottom: 2rem;
+    }
+    .about-card {
+        height: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 1.75rem !important;
+        margin-bottom: 0 !important;
+    }
+    .about-bio-text p {
+        font-size: 1.05rem;
+        line-height: 1.75;
+        color: #E2E8F0;
+        margin-top: 0;
+        margin-bottom: 1.1rem;
+        word-break: break-word;
+    }
+    .about-bio-text p:last-child {
+        margin-bottom: 0;
+    }
+    .about-info-item {
+        margin-bottom: 1.25rem;
+    }
+    .about-info-item:last-child {
+        margin-bottom: 0;
+    }
+    .about-info-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #64748B;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.35rem;
+    }
+    .about-info-val {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #F1F5F9;
+        word-break: break-all;
+        overflow-wrap: anywhere;
+    }
+    .about-info-email {
+        color: #93C5FD !important;
+        text-decoration: none !important;
+        word-break: break-all !important;
+        overflow-wrap: anywhere !important;
+        transition: color 0.2s ease;
+    }
+    .about-info-email:hover {
+        color: #60A5FA !important;
+        text-decoration: underline !important;
+    }
+    .about-spec-val {
+        color: #34D399;
     }
 
     /* Project Cards */
@@ -368,27 +456,41 @@ def get_custom_css() -> str:
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     }
 
+    /* Sub-navigation Anchor Bar */
+    .subnav-bar {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 2.5rem;
+    }
+    .subnav-link {
+        text-decoration: none !important;
+        color: #93C5FD !important;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 9999px;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        transition: all 0.2s ease;
+    }
+    .subnav-link:hover {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: #3B82F6;
+        color: #FFFFFF !important;
+        transform: translateY(-1px);
+    }
+
     /* Footer */
     .footer {
-        margin-top: 5rem;
+        margin-top: 4.5rem;
         padding-top: 2rem;
+        padding-bottom: 1rem;
         border-top: 1px solid var(--border-card);
         text-align: center;
         color: #64748B;
-        font-size: 0.85rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .admin-link {
-        color: #475569 !important;
-        text-decoration: none !important;
-        font-size: 0.8rem;
-        transition: color 0.2s;
-    }
-    .admin-link:hover {
-        color: #94A3B8 !important;
+        font-size: 0.875rem;
     }
 
     /* Admin Management UI Enhancements */
@@ -419,6 +521,43 @@ def get_custom_css() -> str:
     }
     div.stButton > button:hover {
         transform: translateY(-1px);
+    }
+
+    /* Mobile and Tablet Responsiveness */
+    @media (max-width: 768px) {
+        .block-container {
+            padding-top: 1.25rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            padding-bottom: 3rem !important;
+        }
+        .hero-container {
+            padding: 2rem 1rem !important;
+            border-radius: 18px !important;
+        }
+        .hero-avatar {
+            width: 110px !important;
+            height: 110px !important;
+        }
+        .hero-name {
+            font-size: 2rem !important;
+        }
+        .hero-tagline {
+            font-size: 1rem !important;
+        }
+        .section-title {
+            font-size: 1.45rem !important;
+        }
+        .about-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1.25rem;
+        }
+        .about-card {
+            padding: 1.35rem !important;
+        }
+        .glass-card {
+            padding: 1.2rem !important;
+        }
     }
     </style>
     """

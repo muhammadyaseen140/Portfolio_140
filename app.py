@@ -8,8 +8,8 @@ from utils import auth, db, styles
 
 # Set global page configuration (must be first Streamlit command)
 st.set_page_config(
-    page_title="Portfolio | Control Center",
-    page_icon="⚡",
+    page_title="Muhammad Yaseen | Portfolio",
+    page_icon="💼",
     layout="wide",
     initial_sidebar_state="collapsed"
 )

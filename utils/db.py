@@ -160,106 +160,12 @@ def upload_asset_file(uploaded_file, bucket_name: str = "images") -> tuple[bool,
 
 
 # ==============================================================================
-# DEMO DATA (Shown ONLY when DB is empty AND not in admin mode)
-# ==============================================================================
-
-DEMO_PROFILE = {
-    "id": 1,
-    "name": "Alex Rivers",
-    "tagline": "Senior Full-Stack Engineer & AI Systems Architect",
-    "bio": (
-        "I build resilient distributed backend services, high-performance web applications, "
-        "and production-grade LLM interfaces. Passionate about clean code, intuitive UI/UX design, "
-        "and cloud scalability."
-    ),
-    "photo_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
-    "email": "alex.rivers.dev@gmail.com",
-    "github": "https://github.com",
-    "linkedin": "https://linkedin.com"
-}
-
-DEMO_SKILLS = [
-    {"id": 1, "name": "Python & AsyncIO", "category": "Backend & APIs", "level": 95},
-    {"id": 2, "name": "FastAPI & Django", "category": "Backend & APIs", "level": 90},
-    {"id": 3, "name": "PostgreSQL & Supabase", "category": "Backend & APIs", "level": 92},
-    {"id": 4, "name": "Redis & Celery", "category": "Backend & APIs", "level": 85},
-    {"id": 5, "name": "React & Next.js", "category": "Frontend & UI", "level": 88},
-    {"id": 6, "name": "TypeScript & Tailwind CSS", "category": "Frontend & UI", "level": 90},
-    {"id": 7, "name": "Docker & Kubernetes", "category": "Cloud & DevOps", "level": 86},
-    {"id": 8, "name": "AWS & Terraform", "category": "Cloud & DevOps", "level": 84},
-    {"id": 9, "name": "LangChain & RAG Architectures", "category": "AI & Machine Learning", "level": 88},
-    {"id": 10, "name": "PyTorch & Model Serving", "category": "AI & Machine Learning", "level": 82},
-]
-
-DEMO_PROJECTS = [
-    {
-        "id": 1,
-        "title": "OmniQuery: Enterprise RAG Knowledge Assistant",
-        "description": "Multi-tenant semantic search engine indexing 50,000+ technical documents using hybrid dense/sparse retrieval with sub-second latency.",
-        "tech": "Python, FastAPI, Supabase, LangChain, OpenAI, Docker",
-        "cover_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1000&q=80",
-        "live_url": "https://example.com/omniquery",
-        "github_url": "https://github.com/example/omniquery",
-    },
-    {
-        "id": 2,
-        "title": "ApexTelemetry: Real-Time Fleet Telemetry Platform",
-        "description": "High-throughput IoT streaming platform handling 25,000 events/sec with zero data drop during network partitioning.",
-        "tech": "Python, Kafka, TimescaleDB, Redis, Go, React",
-        "cover_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1000&q=80",
-        "live_url": "https://example.com/apex-telemetry",
-        "github_url": "https://github.com/example/apex-telemetry",
-    },
-    {
-        "id": 3,
-        "title": "CloudMorph: Multi-Cloud Infrastructure Compiler",
-        "description": "Declarative infrastructure compiler generating audited, SOC2-compliant AWS and GCP infrastructure code with drift detection.",
-        "tech": "Python, Rust, Terraform, AWS CDK, PostgreSQL",
-        "cover_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1000&q=80",
-        "live_url": "https://example.com/cloudmorph",
-        "github_url": "https://github.com/example/cloudmorph",
-    }
-]
-
-DEMO_PROJECT_IMAGES = {
-    1: [
-        {"id": 1, "project_id": 1, "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80"},
-        {"id": 2, "project_id": 1, "image_url": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80"}
-    ]
-}
-
-DEMO_CERTIFICATIONS = [
-    {
-        "id": 1,
-        "title": "AWS Certified Solutions Architect - Professional",
-        "issuer": "Amazon Web Services (AWS)",
-        "credential_url": "https://aws.amazon.com/certification/",
-        "file_url": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=800&q=80"
-    },
-    {
-        "id": 2,
-        "title": "TensorFlow Developer Certificate",
-        "issuer": "Google",
-        "credential_url": "https://www.tensorflow.org/certificate",
-        "file_url": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80"
-    }
-]
-
-DEMO_CV = {
-    "id": 1,
-    "file_url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-}
-
-
-# ==============================================================================
 # DATA ACCESS FUNCTIONS
 # ==============================================================================
 
 def get_profile(for_admin: bool = False) -> Dict[str, Any]:
     """
-    Retrieve profile details.
-    In admin mode: returns empty dict if database has no record.
-    In public mode: falls back to demo profile only if database is empty.
+    Retrieve profile details from Supabase.
     """
     client = get_supabase_client()
     if client:
@@ -270,14 +176,24 @@ def get_profile(for_admin: bool = False) -> Dict[str, Any]:
         except Exception as e:
             logger.error(f"Error reading profile from Supabase: {e}")
 
-    # Requirement 5: Demo data only when DB is empty AND not in admin mode
     if for_admin or bool(st.session_state.get("admin_user")):
         return {}
-    return DEMO_PROFILE
+    return {
+        "id": 1,
+        "name": "Muhammad Yaseen",
+        "tagline": "Automation Engineer",
+        "bio": "",
+        "photo_url": "",
+        "email": "",
+        "github": "",
+        "linkedin": "",
+        "location": "",
+        "specialization": ""
+    }
 
 
 def get_skills(for_admin: bool = False) -> List[Dict[str, Any]]:
-    """Retrieve categorized skills."""
+    """Retrieve categorized skills from database."""
     client = get_supabase_client()
     if client:
         try:
@@ -287,13 +203,11 @@ def get_skills(for_admin: bool = False) -> List[Dict[str, Any]]:
         except Exception as e:
             logger.error(f"Error reading skills from Supabase: {e}")
 
-    if for_admin or bool(st.session_state.get("admin_user")):
-        return []
-    return DEMO_SKILLS
+    return []
 
 
 def get_projects(for_admin: bool = False) -> List[Dict[str, Any]]:
-    """Retrieve all projects."""
+    """Retrieve all projects from database."""
     client = get_supabase_client()
     if client:
         try:
@@ -303,9 +217,7 @@ def get_projects(for_admin: bool = False) -> List[Dict[str, Any]]:
         except Exception as e:
             logger.error(f"Error reading projects from Supabase: {e}")
 
-    if for_admin or bool(st.session_state.get("admin_user")):
-        return []
-    return DEMO_PROJECTS
+    return []
 
 
 def get_project_images(project_id) -> List[Dict[str, Any]]:
@@ -319,14 +231,11 @@ def get_project_images(project_id) -> List[Dict[str, Any]]:
         except Exception as e:
             logger.error(f"Error reading project images: {e}")
 
-    # Fallback to demo images only for demo project IDs (integers 1-3)
-    if isinstance(project_id, int) and project_id in DEMO_PROJECT_IMAGES:
-        return DEMO_PROJECT_IMAGES.get(project_id, [])
     return []
 
 
 def get_certifications(for_admin: bool = False) -> List[Dict[str, Any]]:
-    """Retrieve all certifications."""
+    """Retrieve all certifications from database."""
     client = get_supabase_client()
     if client:
         try:
@@ -336,13 +245,11 @@ def get_certifications(for_admin: bool = False) -> List[Dict[str, Any]]:
         except Exception as e:
             logger.error(f"Error reading certifications: {e}")
 
-    if for_admin or bool(st.session_state.get("admin_user")):
-        return []
-    return DEMO_CERTIFICATIONS
+    return []
 
 
 def get_active_cv(for_admin: bool = False) -> Optional[Dict[str, Any]]:
-    """Retrieve the currently active CV."""
+    """Retrieve the currently active CV from database."""
     client = get_supabase_client()
     if client:
         try:
@@ -352,9 +259,7 @@ def get_active_cv(for_admin: bool = False) -> Optional[Dict[str, Any]]:
         except Exception as e:
             logger.error(f"Error reading CV: {e}")
 
-    if for_admin or bool(st.session_state.get("admin_user")):
-        return None
-    return DEMO_CV
+    return None
 
 
 # ==============================================================================
@@ -362,7 +267,8 @@ def get_active_cv(for_admin: bool = False) -> Optional[Dict[str, Any]]:
 # ==============================================================================
 
 def upsert_profile(name: str, tagline: str, bio: str, photo_url: str = "",
-                   email: str = "", github: str = "", linkedin: str = "") -> tuple[bool, str]:
+                   email: str = "", github: str = "", linkedin: str = "",
+                   specialization: str = "") -> tuple[bool, str]:
     """
     Requirement 2: About Me (upsert id=1).
     Saves to Supabase profile table with primary key id=1.
@@ -381,6 +287,8 @@ def upsert_profile(name: str, tagline: str, bio: str, photo_url: str = "",
         "github": github.strip(),
         "linkedin": linkedin.strip()
     }
+    if specialization.strip():
+        payload["specialization"] = specialization.strip()
 
     try:
         res = client.table("profile").upsert(payload).execute()
@@ -388,6 +296,16 @@ def upsert_profile(name: str, tagline: str, bio: str, photo_url: str = "",
         return True, "Profile saved successfully (upsert id=1)!"
     except Exception as e:
         err_msg = str(e)
+        # If the specialization column is not yet added in Supabase schema:
+        if "specialization" in err_msg.lower() and "column" in err_msg.lower():
+            logger.warning("Supabase profile table missing 'specialization' column. Retrying without it.")
+            payload.pop("specialization", None)
+            try:
+                client.table("profile").upsert(payload).execute()
+                clear_portfolio_cache()
+                return True, "Profile saved! (To persist Specialization, please run in Supabase SQL Editor: ALTER TABLE profile ADD COLUMN specialization TEXT;)"
+            except Exception as e2:
+                return False, f"Supabase error: {e2}"
         logger.error(f"Error upserting profile: {err_msg}")
         return False, f"Supabase error: {err_msg}"
 
@@ -444,7 +362,7 @@ def delete_skill(skill_id) -> tuple[bool, str]:
         return False, f"Supabase error: {e}"
 
 
-def add_project(title: str, description: str, tech: str,
+def add_project(title: str, description: str = "", tech: str = "",
                 cover_url: str = "", live_url: str = "", github_url: str = "") -> tuple[bool, str, Optional[Any]]:
     """Create a new project."""
     client = get_supabase_client()
@@ -453,11 +371,11 @@ def add_project(title: str, description: str, tech: str,
 
     payload = {
         "title": title.strip(),
-        "description": description.strip(),
-        "tech": tech.strip(),
-        "cover_url": cover_url.strip(),
-        "live_url": live_url.strip(),
-        "github_url": github_url.strip()
+        "description": description.strip() if description else "",
+        "tech": tech.strip() if tech else "",
+        "cover_url": cover_url.strip() if cover_url else "",
+        "live_url": live_url.strip() if live_url else "",
+        "github_url": github_url.strip() if github_url else ""
     }
     try:
         res = client.table("projects").insert(payload).execute()
@@ -468,7 +386,7 @@ def add_project(title: str, description: str, tech: str,
         return False, f"Supabase error: {e}", None
 
 
-def update_project(project_id, title: str, description: str, tech: str,
+def update_project(project_id, title: str, description: str = "", tech: str = "",
                    cover_url: str = "", live_url: str = "", github_url: str = "") -> tuple[bool, str]:
     """Update project details."""
     client = get_supabase_client()
@@ -477,11 +395,11 @@ def update_project(project_id, title: str, description: str, tech: str,
 
     payload = {
         "title": title.strip(),
-        "description": description.strip(),
-        "tech": tech.strip(),
-        "cover_url": cover_url.strip(),
-        "live_url": live_url.strip(),
-        "github_url": github_url.strip()
+        "description": description.strip() if description else "",
+        "tech": tech.strip() if tech else "",
+        "cover_url": cover_url.strip() if cover_url else "",
+        "live_url": live_url.strip() if live_url else "",
+        "github_url": github_url.strip() if github_url else ""
     }
     try:
         client.table("projects").update(payload).eq("id", project_id).execute()
