@@ -292,7 +292,10 @@ def render_portfolio():
             with action_cols[1]:
                 with st.expander("👀 Preview Resume inline"):
                     if cv_url.startswith("http"):
-                        st.components.v1.iframe(cv_url, height=600)
+                        if hasattr(st, "iframe"):
+                            st.iframe(cv_url, height=600)
+                        else:
+                            st.components.v1.iframe(cv_url, height=600)
                     else:
                         st.info("PDF preview available via download.")
     else:
@@ -339,7 +342,7 @@ def render_portfolio():
                     st.success("Thank you! Your message has been sent successfully.")
 
     # ==========================================================================
-    # 8. FOOTER & DISCREET ADMIN LINK
+    # 8. FOOTER
     # ==========================================================================
     styles.render_html(
         f"""
@@ -349,13 +352,6 @@ def render_portfolio():
         </div>
         """
     )
-
-    footer_cols = st.columns([5, 1])
-    with footer_cols[1]:
-        if st.button("🔒 Admin", key="footer_admin_trigger", help="Admin Portal"):
-            st.session_state["show_admin"] = True
-            st.query_params["admin"] = "login"
-            st.rerun()
 
 
 if __name__ == "__main__" or True:
