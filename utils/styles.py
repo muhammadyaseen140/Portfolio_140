@@ -493,6 +493,70 @@ def get_custom_css() -> str:
         font-size: 0.875rem;
     }
 
+    /* Experience Timeline */
+    .timeline-container {
+        position: relative;
+        padding-left: 2rem;
+        margin-top: 1.5rem;
+        margin-bottom: 2.5rem;
+        border-left: 2px solid rgba(59, 130, 246, 0.35);
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+    .timeline-dot {
+        position: absolute;
+        left: calc(-2rem - 7px);
+        top: 1.4rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #3B82F6;
+        border: 2px solid #0F172A;
+        box-shadow: 0 0 10px #3B82F6;
+    }
+    .timeline-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-card);
+        border-radius: 16px;
+        padding: 1.4rem 1.6rem;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .timeline-card:hover {
+        border-color: var(--border-highlight);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 15px var(--primary-glow);
+        transform: translateY(-2px);
+    }
+    .timeline-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #F8FAFC;
+        margin: 0 0 0.35rem 0;
+    }
+    .timeline-company {
+        color: #93C5FD;
+        font-weight: 600;
+    }
+    .timeline-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem;
+        margin-top: 0.35rem;
+        margin-bottom: 0.5rem;
+    }
+    .timeline-date {
+        color: #94A3B8;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
     /* Admin Management UI Enhancements */
     .admin-header {
         background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);

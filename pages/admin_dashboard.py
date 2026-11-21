@@ -39,13 +39,15 @@ def render_dashboard():
                 st.query_params.clear()
                 st.rerun()
 
-    # 5 Management Tabs
-    tab_about, tab_skills, tab_projects, tab_certs, tab_cv = st.tabs([
+    # 7 Management Tabs
+    tab_about, tab_experience, tab_skills, tab_projects, tab_certs, tab_cv, tab_contact = st.tabs([
         "👤 About Me",
+        "💼 Experience",
         "⚡ Skills",
         "🚀 Projects",
         "🎓 Certifications",
-        "📄 CV / Resume"
+        "📄 CV / Resume",
+        "📬 Contact"
     ])
 
     # ==========================================================================
@@ -127,10 +129,113 @@ def render_dashboard():
                             )
                             if ok:
                                 st.session_state.pop("temp_uploaded_photo", None)
+                                st.cache_data.clear()
                                 st.success(msg)
                                 st.rerun()
                             else:
                                 st.error(msg)
+
+    # ==========================================================================
+    # TAB 2: EXPERIENCE (ADD / EDIT / DELETE)
+    # ==========================================================================
+    with tab_experience:
+        st.subheader("Manage Experience")
+        exp_tab_add, exp_tab_edit = st.tabs(["➕ Add Experience", "📝 Edit / Delete Experience"])
+
+        # Add Experience Form
+        with exp_tab_add:
+            with st.form("form_add_experience", clear_on_submit=True):
+                exp_title = st.text_input("Job Title", placeholder="e.g. AI Engineer")
+                exp_company = st.text_input("Company / Organization", placeholder="e.g. Developer Hub")
+                exp_type = st.text_input("Job Type (free text)", placeholder="e.g. Full-time, Internship, Freelance")
+                exp_is_current = st.checkbox("I currently work here", value=False)
+                c_d1, c_d2 = st.columns(2)
+                with c_d1:
+                    exp_start = st.text_input("Start Date", placeholder="e.g. Jan 2024 or 2024-01")
+                with c_d2:
+                    exp_end = st.text_input("End Date", placeholder="e.g. Present" if exp_is_current else "e.g. Jun 2024", disabled=exp_is_current)
+                exp_desc = st.text_area("Description", placeholder="Describe your responsibilities, achievements, and impact...", height=120)
+
+                btn_add_exp = st.form_submit_button("Save Experience ➕", type="primary")
+                if btn_add_exp:
+                    if not any([exp_title.strip(), exp_company.strip(), exp_type.strip(), exp_start.strip(), exp_end.strip(), exp_desc.strip(), exp_is_current]):
+                        st.error("Please provide at least one detail for this experience entry.")
+                    else:
+                        with st.spinner("Saving experience..."):
+                            ok, msg, _ = db.add_experience(
+                                job_title=exp_title,
+                                job_type=exp_type,
+                                company=exp_company,
+                                start_date=exp_start,
+                                end_date="" if exp_is_current else exp_end,
+                                is_current=exp_is_current,
+                                description=exp_desc
+                            )
+                            st.cache_data.clear()
+                            if ok:
+                                st.success(msg)
+                                st.rerun()
+                            else:
+                                st.error(msg)
+
+        # Edit / Delete Experience Form
+        with exp_tab_edit:
+            experiences = db.get_experiences(for_admin=True)
+            if not experiences:
+                st.info("No experience entries found in database yet. Add your first entry in the 'Add Experience' tab.")
+            else:
+                def exp_label(e):
+                    t = e.get("job_title") or "Untitled Role"
+                    c = e.get("company") or "Unknown Company"
+                    curr = " (Current)" if e.get("is_current") else ""
+                    return f"{t} @ {c}{curr} [ID: {e.get('id')}]"
+
+                exp_map = {exp_label(e): e for e in experiences}
+                chosen_key = st.selectbox("Select Experience Entry to Edit or Delete", list(exp_map.keys()))
+                chosen_exp = exp_map[chosen_key]
+                exp_id = chosen_exp.get("id")
+
+                with st.form("form_edit_experience"):
+                    e_title = st.text_input("Job Title", value=chosen_exp.get("job_title", "") or "")
+                    e_company = st.text_input("Company / Organization", value=chosen_exp.get("company", "") or "")
+                    e_type = st.text_input("Job Type (free text)", value=chosen_exp.get("job_type", "") or "")
+                    e_is_current = st.checkbox("I currently work here", value=bool(chosen_exp.get("is_current", False)))
+                    col_ed1, col_ed2 = st.columns(2)
+                    with col_ed1:
+                        e_start = st.text_input("Start Date", value=chosen_exp.get("start_date", "") or "")
+                    with col_ed2:
+                        e_end = st.text_input("End Date", value=chosen_exp.get("end_date", "") or "", disabled=e_is_current)
+                    e_desc = st.text_area("Description", value=chosen_exp.get("description", "") or "", height=120)
+
+                    btn_upd_exp = st.form_submit_button("Update Experience 💾", type="primary")
+                    if btn_upd_exp:
+                        with st.spinner("Updating experience..."):
+                            ok, msg = db.update_experience(
+                                exp_id=exp_id,
+                                job_title=e_title,
+                                job_type=e_type,
+                                company=e_company,
+                                start_date=e_start,
+                                end_date="" if e_is_current else e_end,
+                                is_current=e_is_current,
+                                description=e_desc
+                            )
+                            st.cache_data.clear()
+                            if ok:
+                                st.success(msg)
+                                st.rerun()
+                            else:
+                                st.error(msg)
+
+                if st.button("🗑️ Delete This Experience", type="secondary", key=f"del_exp_{exp_id}"):
+                    with st.spinner("Deleting experience..."):
+                        ok, msg = db.delete_experience(exp_id)
+                        st.cache_data.clear()
+                        if ok:
+                            st.success(msg)
+                            st.rerun()
+                        else:
+                            st.error(msg)
 
     # ==========================================================================
     # TAB 2: SKILLS (ADD / EDIT / DELETE)
@@ -579,12 +684,41 @@ def render_dashboard():
                                 # Requirement 2: upsert id=1
                                 db_ok, db_msg = db.upsert_cv(public_pdf_url)
                                 if db_ok:
+                                    st.cache_data.clear()
                                     st.success(db_msg)
                                     st.rerun()
                                 else:
                                     st.error(db_msg)
                             else:
                                 st.error(public_pdf_url)
+
+    # ==========================================================================
+    # TAB 7: CONTACT (UPSERT ID=1)
+    # ==========================================================================
+    with tab_contact:
+        st.subheader("Manage Contact Details (upsert id=1)")
+        contact = db.get_contact(for_admin=True)
+
+        with st.form("form_contact_upsert"):
+            c_email = st.text_input("Contact Email (optional)", value=contact.get("email", ""), placeholder="e.g. you@example.com")
+            c_phone = st.text_input("Phone Number (optional)", value=contact.get("phone", ""), placeholder="e.g. +1 555-019-2834")
+            c_location = st.text_input("Location (optional)", value=contact.get("location", ""), placeholder="e.g. San Francisco, CA / Remote")
+
+            submit_contact = st.form_submit_button("Save Contact Details (Upsert id=1) 💾", type="primary")
+
+            if submit_contact:
+                with st.spinner("Saving contact details to Supabase..."):
+                    ok, msg = db.upsert_contact(
+                        email=c_email,
+                        phone=c_phone,
+                        location=c_location
+                    )
+                    st.cache_data.clear()
+                    if ok:
+                        st.success(msg)
+                        st.rerun()
+                    else:
+                        st.error(msg)
 
 
 if __name__ == "__main__" or True:

@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 def render_portfolio():
     try:
         profile = db.get_profile(for_admin=False)
+        contact = db.get_contact(for_admin=False)
+        experiences = db.get_experiences(for_admin=False)
         skills = db.get_skills(for_admin=False)
         projects = db.get_projects(for_admin=False)
         certifications = db.get_certifications(for_admin=False)
@@ -25,12 +27,15 @@ def render_portfolio():
     name = profile.get("name") or "Muhammad Yaseen"
     tagline = profile.get("tagline") or ""
     bio = profile.get("bio") or ""
-    email = profile.get("email") or ""
-    location = profile.get("location") or ""
     photo_url = profile.get("photo_url") or profile.get("avatar_url") or ""
     github_url = profile.get("github") or profile.get("github_url") or ""
     linkedin_url = profile.get("linkedin") or profile.get("linkedin_url") or ""
     specialization = profile.get("specialization") or ""
+
+    # Contact details prioritize contact table, fallback to profile
+    email = contact.get("email") or profile.get("email") or ""
+    phone = contact.get("phone") or profile.get("phone") or ""
+    location = contact.get("location") or profile.get("location") or ""
 
     # ==========================================================================
     # 1. HERO SECTION
@@ -67,6 +72,8 @@ def render_portfolio():
     nav_links = []
     if bio:
         nav_links.append('<a href="#about" class="subnav-link">About</a>')
+    if experiences:
+        nav_links.append('<a href="#experience" class="subnav-link">Experience</a>')
     if skills:
         nav_links.append('<a href="#skills" class="subnav-link">Skills</a>')
     if projects:
@@ -95,51 +102,93 @@ def render_portfolio():
         )
         bio_html = f'<div class="about-bio-text">{bio_paragraphs}</div>'
 
-        # Build info card items — only lines with actual data
-        info_items = []
-        if location:
-            info_items.append(f"""
-            <div class="about-info-item">
-                <div class="about-info-label">Location</div>
-                <div class="about-info-val">{location}</div>
-            </div>
-            """)
-        if email:
-            info_items.append(f"""
-            <div class="about-info-item">
-                <div class="about-info-label">Direct Contact</div>
-                <div class="about-info-val">
-                    <a href="mailto:{email}" class="about-info-email">{email}</a>
-                </div>
-            </div>
-            """)
-        if specialization:
-            info_items.append(f"""
-            <div class="about-info-item">
-                <div class="about-info-label">Specialization</div>
-                <div class="about-info-val about-spec-val">{specialization}</div>
-            </div>
-            """)
+        # Full-width bio container without Direct Contact card
+        styles.render_html(f"""
+        <div class="glass-card" style="width: 100%;">
+            {bio_html}
+        </div>
+        """)
 
-        if info_items:
-            # Two-column grid via a single HTML block so CSS can control equal height
-            styles.render_html(f"""
-            <div class="about-grid">
-                <div class="glass-card about-card">
-                    {bio_html}
+    # ==========================================================================
+    # 3. EXPERIENCE SECTION (Rendered only when experiences exist)
+    # ==========================================================================
+    if experiences:
+        styles.render_html('<div id="experience" class="section-header"><div class="section-title"><span>💼</span> Experience</div></div>')
+
+        timeline_items = []
+        for exp in experiences:
+            job_title = exp.get("job_title", "").strip() if exp.get("job_title") else ""
+            company = exp.get("company", "").strip() if exp.get("company") else ""
+            job_type = exp.get("job_type", "").strip() if exp.get("job_type") else ""
+            start_date = exp.get("start_date", "").strip() if exp.get("start_date") else ""
+            end_date = exp.get("end_date", "").strip() if exp.get("end_date") else ""
+            is_current = bool(exp.get("is_current"))
+            description = exp.get("description", "").strip() if exp.get("description") else ""
+
+            # Title & Company
+            title_parts = []
+            if job_title:
+                title_parts.append(job_title)
+            if company:
+                title_parts.append(f'<span class="timeline-company">@ {company}</span>')
+            title_html = f'<h4 class="timeline-title">{" ".join(title_parts)}</h4>' if title_parts else ""
+
+            # Date formatting
+            if is_current:
+                date_text = f"{start_date} – Present" if start_date else "Present"
+                current_badge = '<span class="status-badge" style="padding: 0.15rem 0.55rem; font-size: 0.75rem; margin: 0;"><span class="status-dot" style="width: 6px; height: 6px;"></span> Current</span>'
+            elif start_date and end_date:
+                date_text = f"{start_date} – {end_date}"
+                current_badge = ""
+            elif start_date:
+                date_text = start_date
+                current_badge = ""
+            elif end_date:
+                date_text = end_date
+                current_badge = ""
+            else:
+                date_text = ""
+                current_badge = ""
+
+            meta_parts = []
+            if date_text:
+                meta_parts.append(f'<span class="timeline-date">🗓️ {date_text}</span>')
+            if current_badge:
+                meta_parts.append(current_badge)
+            if job_type:
+                meta_parts.append(f'<span class="tech-pill" style="margin: 0; font-size: 0.75rem;">{job_type}</span>')
+
+            meta_html = f'<div class="timeline-meta">{" ".join(meta_parts)}</div>' if meta_parts else ""
+
+            desc_html = ""
+            if description:
+                desc_paragraphs = "".join(
+                    f"<p style='color: #CBD5E1; font-size: 0.95rem; line-height: 1.6; margin-top: 0.75rem; margin-bottom: 0;'>{p.strip()}</p>"
+                    for p in description.split("\n")
+                    if p.strip()
+                )
+                desc_html = f'<div class="timeline-desc">{desc_paragraphs}</div>'
+
+            timeline_items.append(
+                f"""
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-card">
+                        {title_html}
+                        {meta_html}
+                        {desc_html}
+                    </div>
                 </div>
-                <div class="glass-card about-card">
-                    {''.join(info_items)}
-                </div>
+                """
+            )
+
+        styles.render_html(
+            f"""
+            <div class="timeline-container">
+                {''.join(timeline_items)}
             </div>
-            """)
-        else:
-            # No sidebar info at all — show bio full-width
-            styles.render_html(f"""
-            <div class="glass-card">
-                {bio_html}
-            </div>
-            """)
+            """
+        )
 
     # ==========================================================================
     # 3. SKILLS SECTION (Rendered only when skills exist)
@@ -332,39 +381,33 @@ def render_portfolio():
     # ==========================================================================
     # 7. CONTACT SECTION
     # ==========================================================================
-    styles.render_html('<div id="contact" class="section-header"><div class="section-title"><span>📬</span> Contact & Inquiries</div><div class="section-subtitle">Reach out for collaborations, consulting, or engineering opportunities</div></div>')
+    # Section header — no hardcoded subtitle
+    styles.render_html('<div id="contact" class="section-header"><div class="section-title"><span>📬</span> Contact & Inquiries</div></div>')
 
-    c_col1, c_col2 = st.columns([1, 1])
-    with c_col1:
-        contact_details_html = []
-        if email:
-            contact_details_html.append(f"""
-            <div style="display: flex; align-items: center; gap: 0.6rem; color: #E2E8F0;">
-                <span>✉️</span> <a href="mailto:{email}" style="color: #60A5FA; text-decoration: none;">{email}</a>
-            </div>
-            """)
-        if location:
-            contact_details_html.append(f"""
-            <div style="display: flex; align-items: center; gap: 0.6rem; color: #E2E8F0;">
-                <span>📍</span> {location}
-            </div>
-            """)
+    contact_items = []
+    if email:
+        contact_items.append(f"""
+        <div style="display: flex; align-items: center; gap: 0.75rem; color: #E2E8F0;">
+            <span style="font-size: 1.1rem;">✉️</span>
+            <a href="mailto:{email}" style="color: #60A5FA; text-decoration: none; word-break: break-all;">{email}</a>
+        </div>
+        """)
+    if phone:
+        contact_items.append(f"""
+        <div style="display: flex; align-items: center; gap: 0.75rem; color: #E2E8F0;">
+            <span style="font-size: 1.1rem;">📞</span>
+            <a href="tel:{phone}" style="color: #60A5FA; text-decoration: none;">{phone}</a>
+        </div>
+        """)
+    if location:
+        contact_items.append(f"""
+        <div style="display: flex; align-items: center; gap: 0.75rem; color: #E2E8F0;">
+            <span style="font-size: 1.1rem;">📍</span>
+            <span style="color: #CBD5E1;">{location}</span>
+        </div>
+        """)
 
-        styles.render_html(
-            f"""
-            <div class="glass-card" style="height: 100%;">
-                <h4 style="color: #F8FAFC; margin-bottom: 1rem;">Let's Connect</h4>
-                <p style="color: #94A3B8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
-                    Feel free to reach out for high-impact technical initiatives, architecture consulting, or engineering discussions.
-                </p>
-                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                    {''.join(contact_details_html)}
-                </div>
-            </div>
-            """
-        )
-
-    with c_col2:
+    def render_contact_form():
         with st.form("contact_form", clear_on_submit=True):
             st.markdown("<h4 style='color: #F8FAFC; margin-bottom: 0.5rem;'>Send a Message</h4>", unsafe_allow_html=True)
             sender_name = st.text_input("Your Name", placeholder="Your Name")
@@ -377,6 +420,24 @@ def render_portfolio():
                     st.error("Please fill in all contact fields.")
                 else:
                     st.success("Thank you! Your message has been sent successfully.")
+
+    if contact_items:
+        c_col1, c_col2 = st.columns([1, 1])
+        with c_col1:
+            styles.render_html(
+                f"""
+                <div class="glass-card" style="height: 100%;">
+                    <h4 style="color: #F8FAFC; margin-bottom: 1.25rem; font-weight: 700;">Let's Connect</h4>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {''.join(contact_items)}
+                    </div>
+                </div>
+                """
+            )
+        with c_col2:
+            render_contact_form()
+    else:
+        render_contact_form()
 
     # ==========================================================================
     # 8. FOOTER

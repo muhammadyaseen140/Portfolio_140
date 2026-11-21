@@ -4,6 +4,7 @@ Handles read/write operations with Supabase Auth, caching, and conditional demo 
 """
 
 import os
+import re
 import uuid
 import logging
 from typing import Optional, List, Dict, Any
@@ -260,6 +261,75 @@ def get_active_cv(for_admin: bool = False) -> Optional[Dict[str, Any]]:
             logger.error(f"Error reading CV: {e}")
 
     return None
+
+
+def get_contact(for_admin: bool = False) -> Dict[str, Any]:
+    """Retrieve contact details (email, phone, location) from Supabase."""
+    client = get_supabase_client()
+    if client:
+        try:
+            res = client.table("contact").select("*").eq("id", 1).limit(1).execute()
+            if res.data and len(res.data) > 0:
+                row = res.data[0]
+                return {
+                    "id": row.get("id", 1),
+                    "email": row.get("email") or "",
+                    "phone": row.get("phone") or "",
+                    "location": row.get("location") or ""
+                }
+        except Exception as e:
+            logger.warning(f"Note on contact table read: {e}")
+
+        # Fallback to profile table if contact table not yet created or empty
+        try:
+            p_res = client.table("profile").select("*").eq("id", 1).limit(1).execute()
+            if p_res.data and len(p_res.data) > 0:
+                p_row = p_res.data[0]
+                return {
+                    "id": 1,
+                    "email": p_row.get("email") or "",
+                    "phone": p_row.get("phone") or "",
+                    "location": p_row.get("location") or ""
+                }
+        except Exception:
+            pass
+
+    return {}
+
+
+def sort_experiences_newest_first(experiences: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Sort experiences with current jobs first, then newest dates/records first."""
+    def extract_year(date_str: str) -> int:
+        if not date_str:
+            return 0
+        matches = re.findall(r'\b(19\d\d|20\d\d)\b', str(date_str))
+        if matches:
+            return int(matches[-1])
+        return 0
+
+    def sort_key(item):
+        is_curr = 1 if item.get("is_current") else 0
+        end_yr = extract_year(item.get("end_date", ""))
+        start_yr = extract_year(item.get("start_date", ""))
+        yr = max(end_yr, start_yr)
+        created = str(item.get("created_at") or "")
+        return (is_curr, yr, str(item.get("start_date") or ""), created)
+
+    return sorted(experiences, key=sort_key, reverse=True)
+
+
+def get_experiences(for_admin: bool = False) -> List[Dict[str, Any]]:
+    """Retrieve all experience records from database, sorted newest first."""
+    client = get_supabase_client()
+    if client:
+        try:
+            res = client.table("experience").select("*").order("created_at", desc=True).execute()
+            if res.data is not None:
+                return sort_experiences_newest_first(res.data)
+        except Exception as e:
+            logger.warning(f"Note on experience table read: {e}")
+
+    return []
 
 
 # ==============================================================================
@@ -533,3 +603,113 @@ def upsert_cv(file_url: str) -> tuple[bool, str]:
         return True, "CV published successfully (upsert id=1)!"
     except Exception as e:
         return False, f"Supabase error: {e}"
+
+
+def upsert_contact(email: str = "", phone: str = "", location: str = "") -> tuple[bool, str]:
+    """
+    Save contact details (email, phone, location) with upsert id=1.
+    Saves to 'contact' table and updates profile email/location if available.
+    """
+    client = get_supabase_client()
+    if not client:
+        return False, "Supabase client not configured."
+
+    payload = {
+        "id": 1,
+        "email": email.strip() if email else None,
+        "phone": phone.strip() if phone else None,
+        "location": location.strip() if location else None
+    }
+    try:
+        client.table("contact").upsert(payload).execute()
+        # Also sync to profile table if profile exists
+        try:
+            prof_payload = {"id": 1}
+            if email.strip():
+                prof_payload["email"] = email.strip()
+            if location.strip():
+                prof_payload["location"] = location.strip()
+            client.table("profile").upsert(prof_payload).execute()
+        except Exception:
+            pass
+        clear_portfolio_cache()
+        st.cache_data.clear()
+        return True, "Contact details saved successfully (upsert id=1)!"
+    except Exception as e:
+        err_msg = str(e)
+        logger.error(f"Error upserting contact: {err_msg}")
+        return False, f"Supabase error: {err_msg}"
+
+
+def add_experience(job_title: str = "", job_type: str = "", company: str = "",
+                   start_date: str = "", end_date: str = "", is_current: bool = False,
+                   description: str = "") -> tuple[bool, str, Optional[Any]]:
+    """Create a new experience record."""
+    client = get_supabase_client()
+    if not client:
+        return False, "Supabase client not configured.", None
+
+    payload = {
+        "job_title": job_title.strip() if job_title else None,
+        "job_type": job_type.strip() if job_type else None,
+        "company": company.strip() if company else None,
+        "start_date": start_date.strip() if start_date else None,
+        "end_date": None if is_current else (end_date.strip() if end_date else None),
+        "is_current": bool(is_current),
+        "description": description.strip() if description else None
+    }
+    try:
+        res = client.table("experience").insert(payload).execute()
+        clear_portfolio_cache()
+        st.cache_data.clear()
+        new_id = res.data[0]["id"] if res.data else None
+        return True, "Experience record added successfully.", new_id
+    except Exception as e:
+        err_msg = str(e)
+        logger.error(f"Error adding experience: {err_msg}")
+        return False, f"Supabase error: {err_msg}", None
+
+
+def update_experience(exp_id, job_title: str = "", job_type: str = "", company: str = "",
+                      start_date: str = "", end_date: str = "", is_current: bool = False,
+                      description: str = "") -> tuple[bool, str]:
+    """Update an existing experience record."""
+    client = get_supabase_client()
+    if not client:
+        return False, "Supabase client not configured."
+
+    payload = {
+        "job_title": job_title.strip() if job_title else None,
+        "job_type": job_type.strip() if job_type else None,
+        "company": company.strip() if company else None,
+        "start_date": start_date.strip() if start_date else None,
+        "end_date": None if is_current else (end_date.strip() if end_date else None),
+        "is_current": bool(is_current),
+        "description": description.strip() if description else None
+    }
+    try:
+        client.table("experience").update(payload).eq("id", exp_id).execute()
+        clear_portfolio_cache()
+        st.cache_data.clear()
+        return True, "Experience record updated successfully."
+    except Exception as e:
+        err_msg = str(e)
+        logger.error(f"Error updating experience: {err_msg}")
+        return False, f"Supabase error: {err_msg}"
+
+
+def delete_experience(exp_id) -> tuple[bool, str]:
+    """Delete an experience record."""
+    client = get_supabase_client()
+    if not client:
+        return False, "Supabase client not configured."
+
+    try:
+        client.table("experience").delete().eq("id", exp_id).execute()
+        clear_portfolio_cache()
+        st.cache_data.clear()
+        return True, "Experience record deleted successfully."
+    except Exception as e:
+        err_msg = str(e)
+        logger.error(f"Error deleting experience: {err_msg}")
+        return False, f"Supabase error: {err_msg}"
